@@ -1,0 +1,4 @@
+ENV/
+__pycache__/
+mysql_config.py
+start server.bat
