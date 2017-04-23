@@ -2,11 +2,12 @@
 from flask import Flask ,render_template
 from flask import jsonify
 from flask import request
+from flask_cors import CORS, cross_origin
 import mysql.connector
 from mysql.connector import errorcode
 
 app = Flask(__name__)
-
+CORS(app)
 
 
 MYSQL_SETTING = {
@@ -19,11 +20,16 @@ MYSQL_SETTING = {
 
 def queryDB(query):
   cnx = mysql.connector.connect(**MYSQL_SETTING)
-  cursor = cnx.cursor()
+  cursor = cnx.cursor(dictionary=True)
   cursor.execute(query)
-  result = []
-  for some in cursor:
-    result.append({some[0]:some[1]})
+  result = dict()
+  url = []
+  #row = dict(zip(cursor.column_names, cursor.fetchone()))
+  for row in cursor:
+    result.update(row)
+    url.append(row["url"])
+  print(url)
+  result.update({"url":url})
   cursor.close()
   cnx.close()
   return result
@@ -84,12 +90,11 @@ def post_Feedback(buyer_uid,seller_uid,rating,comments):
 #will return  iid, name, description, price, cid, since, seller_uid, product_location
 #might need another table to collect product location
 @app.route('/Product/<iid>', methods=['GET'])
-def get_Products(iid):
-  query = ("SELECT * FROM ItemListing WHERE iid = \'"+ iid +"\'")
+def get_Product(iid):
+  query = ("SELECT *, i.name AS pname, c.name AS cname FROM item_listing i NATURAL JOIN product_images_relation pir NATURAL JOIN product_images pi JOIN categories c ON i.cid=c.cid JOIN addresses a ON i.seller_uid=a.uid JOIN users u ON i.seller_uid=u.uid WHERE i.iid=" + iid)
   result = queryDB(query)
-  return jsonify({'result' : result})
-
-
+  return jsonify(result)
+  
 #send iid return iid,img_id,url,name for all of images for that item
 @app.route('/Images/<iid>', methods=['GET'])
 def get_Images(iid):
